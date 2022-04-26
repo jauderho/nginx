@@ -1363,7 +1363,7 @@ ngx_http_uwsgi_process_header(ngx_http_request_t *r)
 
         /* rc == NGX_HTTP_PARSE_INVALID_HEADER */
 
-        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "upstream sent invalid header: \"%*s\\x%02xd...\"",
                       r->header_end - r->header_name_start,
                       r->header_name_start, *r->header_end);
@@ -2432,6 +2432,12 @@ ngx_http_uwsgi_set_ssl(ngx_conf_t *cf, ngx_http_uwsgi_loc_conf_t *uwcf)
     cln->handler = ngx_ssl_cleanup_ctx;
     cln->data = uwcf->upstream.ssl;
 
+    if (ngx_ssl_ciphers(cf, uwcf->upstream.ssl, &uwcf->ssl_ciphers, 0)
+        != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
     if (uwcf->upstream.ssl_certificate) {
 
         if (uwcf->upstream.ssl_certificate_key == NULL) {
@@ -2461,12 +2467,6 @@ ngx_http_uwsgi_set_ssl(ngx_conf_t *cf, ngx_http_uwsgi_loc_conf_t *uwcf)
                 return NGX_ERROR;
             }
         }
-    }
-
-    if (ngx_ssl_ciphers(cf, uwcf->upstream.ssl, &uwcf->ssl_ciphers, 0)
-        != NGX_OK)
-    {
-        return NGX_ERROR;
     }
 
     if (uwcf->upstream.ssl_verify) {

@@ -2021,7 +2021,7 @@ ngx_http_proxy_process_header(ngx_http_request_t *r)
 
         /* rc == NGX_HTTP_PARSE_INVALID_HEADER */
 
-        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "upstream sent invalid header: \"%*s\\x%02xd...\"",
                       r->header_end - r->header_name_start,
                       r->header_name_start, *r->header_end);
@@ -2337,6 +2337,7 @@ ngx_http_proxy_non_buffered_copy_filter(void *data, ssize_t bytes)
         ngx_log_error(NGX_LOG_WARN, r->connection->log, 0,
                       "upstream sent more data than specified in "
                       "\"Content-Length\" header");
+        u->keepalive = 0;
         return NGX_OK;
     }
 
@@ -4944,6 +4945,12 @@ ngx_http_proxy_set_ssl(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *plcf)
     cln->handler = ngx_ssl_cleanup_ctx;
     cln->data = plcf->upstream.ssl;
 
+    if (ngx_ssl_ciphers(cf, plcf->upstream.ssl, &plcf->ssl_ciphers, 0)
+        != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
     if (plcf->upstream.ssl_certificate) {
 
         if (plcf->upstream.ssl_certificate_key == NULL) {
@@ -4973,12 +4980,6 @@ ngx_http_proxy_set_ssl(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *plcf)
                 return NGX_ERROR;
             }
         }
-    }
-
-    if (ngx_ssl_ciphers(cf, plcf->upstream.ssl, &plcf->ssl_ciphers, 0)
-        != NGX_OK)
-    {
-        return NGX_ERROR;
     }
 
     if (plcf->upstream.ssl_verify) {
